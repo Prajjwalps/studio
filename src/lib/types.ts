@@ -9,7 +9,7 @@ export interface User {
 }
 
 export interface Laptop {
-  id: string; // Unique identifier, could be serial number
+  id: string; // Unique identifier, typically serial number
   serialNumber: string;
   modelNumber: string;
   status: 'In Warehouse' | 'In Store' | 'In Transit' | 'Received';
@@ -35,8 +35,8 @@ export interface TransferRequest {
   requestTimestamp: string; // ISO Date string
   actionTimestamp?: string; // ISO Date string for accept/reject
   status: TransferStatus;
-  requestedBy: string; // Manager initiating
-  approvedBy?: string; // Manager approving
+  requestedBy: string; // User initiating
+  approvedBy?: string; // User approving
 }
 
 export interface Notification {

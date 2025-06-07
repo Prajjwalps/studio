@@ -5,7 +5,7 @@ import { useAppData } from '@/contexts/AppDataContext';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { QrCode, PackagePlus, ListChecks, Hourglass, UserCheck, ShieldAlert } from 'lucide-react';
+import { QrCode, PackagePlus, ListChecks, Hourglass, UserCheck, ShieldAlert, History, Warehouse } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
@@ -15,7 +15,6 @@ export default function DistributorDashboardPage() {
 
   useEffect(() => {
     if (currentUser && currentUser.role !== 'distributor') {
-      // If not a distributor, redirect to their appropriate dashboard or login
       if (currentUser.role === 'admin') router.replace('/');
       else if (currentUser.role === 'store-owner') router.replace('/store-user');
       else router.replace('/login');
@@ -47,7 +46,7 @@ export default function DistributorDashboardPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Button asChild variant="default" size="lg" className="justify-start text-base py-8">
             <Link href="/distributor/add-inventory">
-              <PackagePlus className="mr-3 h-6 w-6" /> Add New Inventory (QR Scan Soon)
+              <PackagePlus className="mr-3 h-6 w-6" /> Add New Inventory
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="justify-start text-base py-8">

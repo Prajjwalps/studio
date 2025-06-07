@@ -33,7 +33,7 @@ interface AppDataContextType {
   markNotificationAsRead: (notificationId: string) => void;
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
   getNotifications: (read?: boolean) => Notification[];
-  addLaptopToInventory: (laptop: Omit<Laptop, 'status' | 'currentLocation' | 'lastTransferId'>) => void;
+  addLaptopToInventory: (laptopData: { serialNumber: string, modelNumber: string }) => boolean;
 }
 
 const AppDataContext = createContext<AppDataContextType | undefined>(undefined);
@@ -52,12 +52,11 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       const user: User = JSON.parse(storedUser);
-      // Validate user against MOCK_USERS to prevent issues if MOCK_USERS changes
       const validUser = MOCK_USERS.find(mu => mu.id === user.id);
       if (validUser) {
         setCurrentUser(validUser);
       } else {
-        localStorage.removeItem('currentUser'); // Clear invalid stored user
+        localStorage.removeItem('currentUser');
       }
     }
   }, []);
@@ -68,11 +67,10 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       setCurrentUser(user);
       localStorage.setItem('currentUser', JSON.stringify(user));
       toast({ title: "Login Successful", description: `Welcome, ${user.name}!` });
-      // Redirection will be handled by the page/layout based on role
       if (user.role === 'admin') router.push('/');
       else if (user.role === 'distributor') router.push('/distributor');
       else if (user.role === 'store-owner') router.push('/store-user');
-      else router.push('/'); // Fallback
+      else router.push('/'); 
     } else {
       toast({ title: "Login Failed", description: "User not found.", variant: "destructive" });
     }
@@ -101,7 +99,7 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       timestamp: new Date().toISOString(),
       read: false,
     };
-    setNotifications(prev => [newNotification, ...prev].slice(0, 20)); // Keep last 20 notifications
+    setNotifications(prev => [newNotification, ...prev].slice(0, 20)); 
   }, [notifications.length]);
   
   const addTransferRequest = useCallback((requestData: Omit<TransferRequest, 'id' | 'requestTimestamp' | 'status'>) => {
@@ -150,8 +148,8 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       )
     );
 
-    const updatedRequest = transferRequests.find(req => req.id === requestId); // Find from existing state before update
-     if (updatedRequest) { // Check if updatedRequest is found
+    const updatedRequest = transferRequests.find(req => req.id === requestId); 
+     if (updatedRequest) { 
       setLaptops(prevLaptops =>
         prevLaptops.map(laptop => {
           if (laptop.id === updatedRequest.laptopId) {
@@ -202,9 +200,21 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     return notifications.filter(n => n.read === read).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [notifications]);
 
-  const addLaptopToInventory = useCallback((laptopData: Omit<Laptop, 'status' | 'currentLocation' | 'lastTransferId'>) => {
+  const addLaptopToInventory = useCallback((laptopData: { serialNumber: string, modelNumber: string }): boolean => {
+    const existingLaptop = getLaptopById(laptopData.serialNumber);
+    if (existingLaptop) {
+      toast({
+        title: "Error: Laptop Exists",
+        description: `Laptop with Serial Number ${laptopData.serialNumber} already exists.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+
     const newLaptop: Laptop = {
-      ...laptopData,
+      id: laptopData.serialNumber, // Using serial number as ID for simplicity
+      serialNumber: laptopData.serialNumber,
+      modelNumber: laptopData.modelNumber,
       status: 'In Warehouse',
       currentLocation: WAREHOUSE_ID,
     };
@@ -217,7 +227,8 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       message: `New Laptop ${laptopData.serialNumber} (${laptopData.modelNumber}) added to warehouse by ${currentUser?.name || 'System'}.`,
       type: 'success',
     });
-  }, [toast, addNotification, currentUser]);
+    return true;
+  }, [getLaptopById, toast, addNotification, currentUser?.name]);
 
   return (
     <AppDataContext.Provider value={{ 
