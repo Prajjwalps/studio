@@ -10,13 +10,25 @@ import { format } from 'date-fns';
 import type { TransferRequest } from "@/lib/types";
 
 export function PendingRequestsList() {
-  const { transferRequests, updateTransferStatus, getLocationNameById } = useAppData();
-  // In a real app, filter for requests where current user's store is the destination
-  // For demo, we show all pending requests.
-  const pending = transferRequests.filter(req => req.status === 'Pending');
+  const { transferRequests, updateTransferStatus, getLocationNameById, currentUser } = useAppData();
+  
+  let pending;
+  if (currentUser?.role === 'store-owner') {
+    // Store owner sees requests where their store is the destination
+    pending = transferRequests.filter(req => req.status === 'Pending' && req.toLocation === currentUser.storeId);
+  } else if (currentUser?.role === 'admin') {
+    // Admin sees all pending requests (or could be configurable)
+    pending = transferRequests.filter(req => req.status === 'Pending');
+  } else {
+    // Other roles (e.g., distributor) shouldn't see this component directly, or it shows nothing.
+    pending = [];
+  }
+
 
   const handleAction = (requestId: string, action: 'Accepted' | 'Rejected') => {
-    updateTransferStatus(requestId, action, "Current Manager (Demo)");
+    // For store owners, approver is implicitly them. For admin, it's the admin user.
+    const approverName = currentUser?.name || "System";
+    updateTransferStatus(requestId, action, approverName);
   };
 
   if (pending.length === 0) {
@@ -24,7 +36,12 @@ export function PendingRequestsList() {
        <Card className="shadow-lg">
         <CardHeader>
             <CardTitle className="font-headline text-2xl flex items-center gap-2"><Hourglass /> No Pending Transfers</CardTitle>
-            <CardDescription>There are no incoming laptops awaiting your confirmation at this time.</CardDescription>
+            <CardDescription>
+              {currentUser?.role === 'store-owner' 
+                ? "There are no incoming laptops awaiting your confirmation at this time."
+                : "There are no pending transfer requests in the system."
+              }
+            </CardDescription>
         </CardHeader>
         <CardContent>
             <div className="text-center py-8">
@@ -40,7 +57,12 @@ export function PendingRequestsList() {
     <Card className="shadow-xl">
       <CardHeader>
         <CardTitle className="font-headline text-2xl">Incoming Laptop Transfers</CardTitle>
-        <CardDescription>Review and confirm receipt of laptops transferred to your location.</CardDescription>
+        <CardDescription>
+          {currentUser?.role === 'store-owner'
+            ? "Review and confirm receipt of laptops transferred to your store."
+            : "Review and manage all pending laptop transfer requests."
+          }
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -49,6 +71,7 @@ export function PendingRequestsList() {
               <TableHead>Serial No.</TableHead>
               <TableHead>Model</TableHead>
               <TableHead>From</TableHead>
+              { currentUser?.role === 'admin' && <TableHead>To</TableHead> }
               <TableHead>Requested</TableHead>
               <TableHead className="text-center">Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -60,6 +83,7 @@ export function PendingRequestsList() {
                 <TableCell className="font-medium">{request.serialNumber}</TableCell>
                 <TableCell>{request.modelNumber}</TableCell>
                 <TableCell>{getLocationNameById(request.fromLocation)}</TableCell>
+                { currentUser?.role === 'admin' && <TableCell>{getLocationNameById(request.toLocation)}</TableCell> }
                 <TableCell>{format(new Date(request.requestTimestamp), 'MMM d, yyyy HH:mm')}</TableCell>
                 <TableCell className="text-center">
                   <Badge variant="outline" className="capitalize border-yellow-500 text-yellow-600">

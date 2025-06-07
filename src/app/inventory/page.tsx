@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Laptop } from "lucide-react";
 import type { Laptop as LaptopType } from "@/lib/types";
 import { WAREHOUSE_ID } from "@/lib/constants";
+import { useSearchParams } from 'next/navigation';
+import React from "react";
 
 const statusColors: { [key: string]: string } = {
   'In Warehouse': 'bg-blue-100 text-blue-700 border-blue-300',
@@ -17,21 +19,40 @@ const statusColors: { [key: string]: string } = {
 
 
 export default function InventoryPage() {
-  const { laptops, getLocationNameById } = useAppData();
+  const { laptops, getLocationNameById, currentUser } = useAppData();
+  const searchParams = useSearchParams();
+  const storeIdQuery = searchParams.get('storeId');
+
+  let displayedLaptops = laptops;
+  let pageTitle = "Laptop Inventory";
+  let pageDescription = "Overview of all laptops in the system, their status, and location.";
+
+  if (currentUser?.role === 'store-owner' && currentUser.storeId) {
+    // If store owner, always filter by their storeId, ignore query param for security/simplicity
+    displayedLaptops = laptops.filter(laptop => laptop.currentLocation === currentUser.storeId);
+    pageTitle = `${getLocationNameById(currentUser.storeId)} Inventory`;
+    pageDescription = `Laptops currently at ${getLocationNameById(currentUser.storeId)}.`;
+  } else if (storeIdQuery) {
+    // For admins/distributors, allow filtering by storeId via query param
+    displayedLaptops = laptops.filter(laptop => laptop.currentLocation === storeIdQuery);
+    pageTitle = `${getLocationNameById(storeIdQuery)} Inventory`;
+    pageDescription = `Laptops currently at ${getLocationNameById(storeIdQuery)}.`;
+  }
+
 
   return (
     <div className="container mx-auto py-8 space-y-6">
       <h1 className="text-3xl font-bold font-headline text-primary flex items-center gap-2">
-        <Laptop className="h-8 w-8" /> Laptop Inventory
+        <Laptop className="h-8 w-8" /> {pageTitle}
       </h1>
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle>All Laptops</CardTitle>
-          <CardDescription>Overview of all laptops in the system, their status, and location.</CardDescription>
+          <CardTitle>All Laptops ({displayedLaptops.length})</CardTitle>
+          <CardDescription>{pageDescription}</CardDescription>
         </CardHeader>
         <CardContent>
-          {laptops.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No laptops in inventory.</p>
+          {displayedLaptops.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">No laptops match the current filter.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -43,7 +64,7 @@ export default function InventoryPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {laptops.map((laptop: LaptopType) => (
+                {displayedLaptops.map((laptop: LaptopType) => (
                   <TableRow key={laptop.id}>
                     <TableCell className="font-medium">{laptop.serialNumber}</TableCell>
                     <TableCell>{laptop.modelNumber}</TableCell>
