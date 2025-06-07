@@ -1,4 +1,13 @@
 
+export type UserRole = 'admin' | 'distributor' | 'store-owner';
+
+export interface User {
+  id: string;
+  name: string;
+  role: UserRole;
+  storeId?: string; // Only relevant for store-owners
+}
+
 export interface Laptop {
   id: string; // Unique identifier, could be serial number
   serialNumber: string;
@@ -31,7 +40,7 @@ export interface TransferRequest {
 }
 
 export interface Notification {
-  id: string;
+  id:string;
   message: string;
   timestamp: string;
   read: boolean;
